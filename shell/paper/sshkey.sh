@@ -1,16 +1,38 @@
 #!/bin/sh
-#FIXME: 
-    创建秘钥的操作：ssh-keygen -q <-t type>  <-N "">  <-C comment> <-f keypath>
-    使用私钥：修改权限600，ssh -i prikey usr@hostname
-#attach 命令要求同时传递pubkey串，从而将公钥attach到当前主机上.
-#detach 命令要求同时传递comment内容，从而将以此为依据将公钥从认证文件中删除.
-
+#Server will use this script to {create|attach|detach} keys.
+#Client use the command to connect the Server. (ssh -i prikey usr@hostname) 
 
 KeyDir="/root/.ssh/"
 PKeyPath="/root/.ssh/authorized_keys"
 PUBKEY=""
 COMMENT=""
+TYPE=""
+PRIFILE=""
 
+usage(){
+    echo "$0 --command create <--type type>  <--comment comment> <--prifile prifilename>"
+    echo "        --type: rsa1/rsa/dsa"
+    echo "        --comment: the comment of the key"
+    echo "        --prifile: the prikey path and filename. ie. /root/prikey/newkey"
+    echo "$0 --command attach <--pubkey keystring>"
+    echo "        --pubkey: the public key string which want to attach."
+    echo "$0 --command detach <--comment comment>"
+    echo "        --pubkey: the comment of the public key which want to detach.(it will datach all the key have the same comment)"
+}
+
+create(){
+   local pridir=`dirname $PRIFILE`
+   echo $pridir
+
+   if [ ! -d $pridir ]; then
+        mkdir -p $pridir
+   fi
+
+   rm -f ${PRIFILE}
+   rm -f ${PRIFILE}.pub
+
+   ssh-keygen -q -t $TYPE -N "" -C $COMMENT -f $PRIFILE > /dev/null 2>&1
+}
 
 detach(){
 
@@ -62,7 +84,7 @@ VerfiyParameter(){
 
 #dattach "$1"
 
-TEMP=`getopt -o m:c:t: --long command:,pubkey:,comment: \
+TEMP=`getopt -o m:c:t:y:p: --long command:,pubkey:,comment:,type:,prifile:, \
      -n 'ERROR' -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -74,6 +96,8 @@ while true ; do
                 -m| --command) COMMAND=$2 ; shift 2 ;;
                 -c|--pubkey) PUBKEY=$2; shift 2 ;;
                 -t|--comment) COMMENT=$2; shift 2 ;;
+                -y|--type) TYPE=$2; shift 2 ;;
+                -p|--prifile) PRIFILE=$2; shift 2 ;;
                 --) shift ; break ;;
                 *) echo "Unknow Option, verfiy your command" ; usage; exit 1 ;;
         esac
@@ -83,6 +107,7 @@ if [ -z "${COMMAND}" ];then
     echo "COMMAND IS NULL"
     exit 1
 fi
+
 
 case $COMMAND in
     attach)
@@ -99,8 +124,18 @@ case $COMMAND in
        fi
        detach $COMMENT  
        ;;
+    create) 
+       if ! ret=`VerfiyParameter "COMMENT TYPE PRIFILE"`; then
+           echo "$ret not set"
+           exit 1
+       fi
+       create 
+       ;;
+    usage)
+        usage
+        ;;
     *)
-       echo $"Usage: $0 {start|stop|restart|condrestart|status}"
+        usage
        exit 2
        ;;
 esac
