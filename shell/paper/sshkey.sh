@@ -2,8 +2,9 @@
 #Server will use this script to {create|attach|detach} keys.
 #Client use the command to connect the Server. (ssh -i prikey usr@hostname) 
 
-KeyDir="/root/.ssh/"
-PKeyPath="/root/.ssh/authorized_keys"
+KeyDir="~/.ssh/"
+PKeyPath="~/.ssh/authorized_keys"
+COMMAND=""
 PUBKEY=""
 COMMENT=""
 TYPE=""
